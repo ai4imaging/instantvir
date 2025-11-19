@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>
+      InstantViR: Real-Time Video Inverse Problem Solver with Distilled
+      Diffusion Prior
+    </title>
+    <meta
+      name="description"
+      content="InstantViR transforms a slow video diffusion prior into a single-step, real-time solver for video inpainting, deblurring and super-resolution."
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <div class="top-nav">
+      <div class="top-nav-inner">
+        <div class="top-nav-brand">
+          <span class="top-nav-logo">⚡</span>
+          <span class="top-nav-name">InstantViR</span>
+        </div>
+        <nav class="top-nav-links">
+          <a href="#abstract">Abstract</a>
+          <a href="#method">Method</a>
+          <a href="#videos">Qualitative Results</a>
+          <a href="#metrics">Speed &amp; Quality</a>
+          <a href="#bibtex">BibTeX</a>
+        </nav>
+      </div>
+    </div>
+
+    <header class="hero">
+      <div class="hero-inner">
+        <div class="hero-main">
+          <div class="brand-banner">
+            <span class="brand-wordmark">InstantViR</span>
+          </div>
+          <div class="badge-row">
+            <div class="badge">
+              <span class="dot"></span>
+              <span>Real-Time Video Inverse Problems</span>
+            </div>
+            <div class="badge">One-step distilled diffusion prior</div>
+          </div>
+          <h1 class="title">
+            Real-Time Video Inverse Problem Solver with Distilled
+            Diffusion Prior
+          </h1>
+          <p class="subtitle">
+            An amortized, causal video solver distilled from a powerful diffusion
+            prior, delivering streaming inpainting, deblurring and 4×
+            super-resolution at over 35&nbsp;FPS.
+          </p>
+
+          <div class="authors">
+            <strong>Weimin Bai</strong><sup>1</sup>,
+            <strong>Suzhe Xu</strong><sup>2</sup>,
+            <strong>Yiwei Ren</strong><sup>1</sup>,
+            <strong>Jinhua Hao</strong><sup>3</sup>,
+            <strong>Ming Sun</strong><sup>3</sup>,
+            <strong>Wenzheng Chen</strong><sup>1†</sup>,
+            <strong>He Sun</strong><sup>1†</sup>
+          </div>
+          <div class="affiliations">
+            <sup>1</sup>Peking University&nbsp;&nbsp;&nbsp;
+            <sup>2</sup>Huaqiao University&nbsp;&nbsp;&nbsp;
+            <sup>3</sup>Kuaishou Technology
+          </div>
+
+          <div class="cta-row">
+            <a
+              class="btn btn-primary"
+              href="http://arxiv.org/abs/2511.14208"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span class="icon">📄</span>
+              <span>Paper / Project</span>
+            </a>
+            <a class="btn btn-ghost" href="#videos">
+              <span class="icon">▶</span>
+              <span>Watch Demos</span>
+            </a>
+            <a class="btn btn-ghost" href="#bibtex">
+              <span class="icon">🔖</span>
+              <span>Cite InstantViR</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="hero-teaser">
+          <img
+            src="figs/instantvir-teaser8.svg"
+            alt="Teaser figure of InstantViR: real-time video inverse problems with inpainting, deblurring and SR4×."
+          />
+          <div class="tag">
+            <!-- <span class="accent">Real-time, one-step streaming reconstruction</span> -->
+            <!-- <span>Random inpainting · Deblurring · SR4× · Text-guided control</span> -->
+          </div>
+        </div>
+      </div>
+      <br>
+      <br>
+    </header>
+
+    <main>
+      <div class="page">
+        <!-- Abstract -->
+        <section class="section" id="abstract">
+          <div class="section-header">
+            <div>
+              <div class="section-kicker">Abstract</div>
+              <h2 class="section-title">Diffusion-level quality at real-time speed</h2>
+            </div>
+          </div>
+          <div class="card abstract-text">
+            <p>
+              <span class="highlight">Video inverse problems</span> such as inpainting,
+              deblurring and super-resolution are fundamental to streaming,
+              telepresence and AR/VR, where high perceptual quality must coexist with tight
+              latency constraints. Diffusion-based priors currently deliver
+              state-of-the-art reconstructions, but existing approaches either
+              adapt image diffusion models with ad-hoc temporal regularizers&mdash;leading
+              to temporal artifacts&mdash;or rely on native video diffusion models
+              whose iterative posterior sampling is far too slow for real-time use.
+            </p>
+            <p>
+              <strong>InstantViR</strong> is an
+              <span class="highlight">amortized inference framework</span> for
+              ultra-fast video reconstruction powered by a pre-trained video
+              diffusion prior. We distill a powerful bidirectional video diffusion
+              model (teacher) into a causal autoregressive student that maps a
+              degraded video directly to its restored version in a single forward
+              pass, inheriting the teacher&apos;s strong temporal modeling while
+              completely removing iterative test-time optimization.
+            </p>
+            <p>
+              The solver is trained only with the frozen diffusion prior and
+              known degradation operators&mdash;no paired clean/noisy video data
+              is required. A highly efficient
+              <span class="highlight">LeanVAE</span> further boosts throughput for latent-space
+              processing. Across streaming random inpainting, Gaussian deblurring
+              and 4× super-resolution, InstantViR matches or surpasses diffusion
+              baselines while running at over
+              <span class="highlight">35&nbsp;FPS</span> on A100 GPUs, achieving up to
+              <span class="highlight">100× speedups</span> over iterative video diffusion solvers.
+            </p>
+            <div class="pill-row">
+              <span class="pill">Amortized variational inference</span>
+              <span class="pill">Diffusion distillation</span>
+              <span class="pill">Causal autoregressive video solver</span>
+              <span class="pill">LeanVAE for high-throughput decoding</span>
+              <span class="pill">Supports text-guided reconstruction</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Method -->
+        <section class="section" id="method">
+          <div class="section-header">
+            <div>
+              <div class="section-kicker">Method</div>
+              <h2 class="section-title">From slow diffusion prior to instant solver</h2>
+            </div>
+            <p class="section-subtitle">
+              InstantViR converts a bidirectional video diffusion model into a
+              single-step, causal solver trained in the latent space with a
+              principled variational objective.
+            </p>
+          </div>
+
+          <div class="method-layout">
+            <div class="overview-fig">
+              <img
+                src="figs/instantvir-overview4.svg"
+                alt="Training and inference overview of InstantViR."
+              />
+              <div class="overview-caption">
+                <strong>Overview.</strong> During training, InstantViR jointly
+                optimizes data fidelity and prior distillation using a frozen
+                video diffusion teacher. At inference time, the learned solver
+                runs as a fast, causal feed-forward network over video blocks.
+              </div>
+            </div>
+            <div>
+              <ul class="method-list">
+                <li class="method-item">
+                  <h3 class="method-item-title">
+                    Amortized posterior objective in latent space
+                  </h3>
+                  <p class="method-item-desc">
+                    We minimize the KL divergence
+                    between the solver&apos;s conditional distribution
+                    <em>q<span style="font-size: 0.9em;">(z | y)</span></em> and the
+                    true posterior induced by the diffusion prior.
+                    The objective decomposes into a likelihood term enforcing
+                    measurement consistency and a prior term implemented as
+                    score distillation with the teacher model.
+                  </p>
+                </li>
+                <li class="method-item">
+                  <h3 class="method-item-title">
+                    Causal, block-wise autoregressive DiT
+                  </h3>
+                  <p class="method-item-desc">
+                    The student operates on temporal blocks of frames with
+                    intra-block bidirectional attention and inter-block causal
+                    attention. A KV cache reuses keys/values from past blocks,
+                    enabling efficient streaming inference while preserving
+                    long-range temporal coherence.
+                  </p>
+                </li>
+                <li class="method-item">
+                  <h3 class="method-item-title">LeanVAE with teacher-space regularization</h3>
+                  <p class="method-item-desc">
+                    To remove the VAE bottleneck, we plug in an ultra-efficient
+                    LeanVAE and regularize its latent space by mapping decoded
+                    frames back into the teacher latent space before applying
+                    score distillation. This alignment keeps the distilled solver
+                    compatible with the original diffusion prior while yielding
+                    &gt;2× additional speedup.
+                  </p>
+                </li>
+              </ul>
+            </div>
+
+            <!-- <div class="overview-fig">
+              <img
+                src="figs/instantvir-overview4.svg"
+                alt="Training and inference overview of InstantViR."
+              />
+              <div class="overview-caption">
+                <strong>Overview.</strong> During training, InstantViR jointly
+                optimizes data fidelity and prior distillation using a frozen
+                video diffusion teacher. At inference time, the learned solver
+                runs as a fast, causal feed-forward network over video blocks.
+              </div>
+            </div> -->
+          </div>
+        </section>
+
+        <!-- Video demos -->
+        <section class="section" id="videos">
+          <div class="section-header">
+            <div>
+              <div class="section-kicker">Qualitative Results</div>
+              <h2 class="section-title">Random inpainting, deblurring and SR4×</h2>
+            </div>
+            <p class="section-subtitle">
+              Side-by-side comparisons against diffusion-based baselines (DPS,
+              SVI, VISION-XL) and ground truth. All demos are generated with the
+              same degraded inputs as in the paper figures.
+            </p>
+          </div>
+
+          <div class="task-tabs">
+            <!-- Inpainting -->
+            <article class="task-card">
+              <header class="task-header">
+                <h3 class="task-title">50% Random Inpainting</h3>
+                <span class="task-badge">Sharp</span>
+              </header>
+              <p class="task-desc">
+                InstantViR reconstructs sharp and temporally stable content from
+                heavily masked measurements, recovering fine facial details and
+                background textures.
+              </p>
+              <div class="media-rows">
+                <div class="media-row full">
+                  <figure>
+                    <div class="cmp" data-cmp>
+                      <video
+                        src="vis_video/inpainting/reconstructed_014(Ours).mp4"
+                        autoplay
+                        loop
+                        muted
+                        playsinline
+                      ></video>
+                      <div class="cmp-layer cmp-top">
+                        <video
+                          src="vis_video/inpainting/measurement_014.mp4"
+                          autoplay
+                          loop
+                          muted
+                          playsinline
+                          controls
+                        ></video>
+                      </div>
+                      <div class="cmp-handle"></div>
+                      <button class="cmp-knob" type="button"><span>⇔</span></button>
+                      <div class="cmp-labels">
+                        <span class="cmp-label">Measurement</span>
+                        <span class="cmp-label">InstantViR (Ours)</span>
+                      </div>
+                    </div>
+                    <figcaption>Drag to compare Measurement vs InstantViR (Ours)</figcaption>
+                  </figure>
+                </div>
+                <div class="media-row secondary">
+                  <figure>
+                    <video
+                      src="vis_video/inpainting/groundtruth_014.mp4"
+                      autoplay
+                      loop
+                      muted
+                      playsinline
+                      controls
+                    ></video>
+                    <figcaption>Ground Truth</figcaption>
+                  </figure>
+                  <figure>
+                    <img
+                      src="vis_video/inpainting/vision-xl.gif"
+                      alt="VISION-XL baseline for inpainting."
+                    />
+                    <figcaption>VISION-XL</figcaption>
+                  </figure>
+                </div>
+                <div class="media-row secondary">
+                  <figure>
+                    <img
+                      src="vis_video/inpainting/DPS.gif"
+                      alt="DPS baseline for inpainting."
+                    />
+                    <figcaption>DPS</figcaption>
+                  </figure>
+                  <figure>
+                    <img
+                      src="vis_video/inpainting/SVI.gif"
+                      alt="SVI baseline for inpainting."
+                    />
+                    <figcaption>SVI</figcaption>
+                  </figure>
+                </div>
+              </div>
+            </article>
+
+            <!-- Deblurring -->
+            <article class="task-card">
+              <header class="task-header">
+                <h3 class="task-title">Streaming Gaussian Deblurring</h3>
+                <span class="task-badge">Real-time</span>
+              </header>
+              <p class="task-desc">
+                The model removes strong motion blur while preserving subtle
+                structures and avoiding hallucinated artifacts, even under
+                streaming constraints.
+              </p>
+              <div class="media-rows">
+                <div class="media-row full">
+                  <figure>
+                    <div class="cmp" data-cmp>
+                      <video
+                        src="vis_video/deblur/reconstructed_012(Ours).mp4"
+                        autoplay
+                        loop
+                        muted
+                        playsinline
+                      ></video>
+                      <div class="cmp-layer cmp-top">
+                        <video
+                          src="vis_video/deblur/measurement_012.mp4"
+                          autoplay
+                          loop
+                          muted
+                          playsinline
+                          controls
+                        ></video>
+                      </div>
+                      <div class="cmp-handle"></div>
+                      <button class="cmp-knob" type="button"><span>⇔</span></button>
+                      <div class="cmp-labels">
+                        <span class="cmp-label">Measurement</span>
+                        <span class="cmp-label">InstantViR (Ours)</span>
+                      </div>
+                    </div>
+                    <figcaption>Drag to compare Measurement vs InstantViR (Ours)</figcaption>
+                  </figure>
+                </div>
+                <div class="media-row secondary">
+                  <figure>
+                    <video
+                      src="vis_video/deblur/groundtruth_012.mp4"
+                      autoplay
+                      loop
+                      muted
+                      playsinline
+                      controls
+                    ></video>
+                    <figcaption>Ground Truth</figcaption>
+                  </figure>
+                  <figure>
+                    <img
+                      src="vis_video/deblur/vision-xl.gif"
+                      alt="VISION-XL baseline for deblurring."
+                    />
+                    <figcaption>VISION-XL</figcaption>
+                  </figure>
+                </div>
+                <div class="media-row secondary">
+                  <figure>
+                    <img
+                      src="vis_video/deblur/DPS.gif"
+                      alt="DPS baseline for deblurring."
+                    />
+                    <figcaption>DPS</figcaption>
+                  </figure>
+                  <figure>
+                    <img
+                      src="vis_video/deblur/SVI.gif"
+                      alt="SVI baseline for deblurring."
+                    />
+                    <figcaption>SVI</figcaption>
+                  </figure>
+                </div>
+              </div>
+            </article>
+
+            <!-- Text regularization -->
+            <article class="task-card">
+              <header class="task-header">
+                <h3 class="task-title">Text-guided reconstruction</h3>
+                <span class="task-badge">Controllability</span>
+              </header>
+              <p class="task-desc">
+                InstantViR can optionally leverage text prompts to regularize
+                and edit reconstruction, e.g., modifying local attributes such as
+                lip color or eye appearance while keeping the overall scene
+                stable.
+              </p>
+              <div class="media-rows">
+                <div class="media-row secondary">
+                  <figure>
+                    <video
+                      src="vis_video/text%20regularization/original_026.mp4"
+                      loop
+                      muted
+                      playsinline
+                      controls
+                    ></video>
+                    <figcaption>Original video</figcaption>
+                  </figure>
+                  <figure>
+                    <video
+                      src="vis_video/text%20regularization/measurement_026.mp4"
+                      loop
+                      muted
+                      playsinline
+                      controls
+                    ></video>
+                    <figcaption>Measurement</figcaption>
+                  </figure>
+                </div>
+                <div class="media-row secondary">
+                  <figure>
+                    <video
+                      src="vis_video/text%20regularization/reconstructed_val_026_pink_lip.mp4"
+                      loop
+                      muted
+                      playsinline
+                      controls
+                    ></video>
+                    <figcaption>Prompt: “pink lips”</figcaption>
+                  </figure>
+                  <figure>
+                    <video
+                      src="vis_video/text%20regularization/reconstructed_val_026_green_eyes.mp4"
+                      loop
+                      muted
+                      playsinline
+                      controls
+                    ></video>
+                    <figcaption>Prompt: “green eyes”</figcaption>
+                  </figure>
+                </div>
+              </div>
+            </article>
+
+          </div>
+
+          <div class="overview-fig" style="margin-top: 18px">
+            <img
+              src="figs/instantvir-randominp.svg"
+              alt="Qualitative comparison for video random inpainting on Open-Sora and REDS."
+            />
+            <div class="overview-caption">
+              <strong>Random inpainting figure.</strong> Static overview of
+              InstantViR vs. baselines on Open-Sora and REDS, with zoom-ins
+              matching the video demos above.
+            </div>
+          </div>
+
+          <div class="overview-fig" style="margin-top: 14px">
+            <img
+              src="figs/instantvir-textreg-2.svg"
+              alt="Text-guided video reconstruction with prompts such as 'black headband', 'wear glasses', 'close eyes', 'open eyes'."
+            />
+            <div class="overview-caption">
+              <strong>Text-guided reconstruction figure.</strong> High-level
+              summary of how prompts control local attributes like headband,
+              glasses and eye state while keeping the overall scene coherent.
+            </div>
+          </div>
+        </section>
+
+        <!-- Speed & metrics -->
+        <section class="section" id="metrics">
+          <div class="section-header">
+            <div>
+              <div class="section-kicker">Speed & Quality</div>
+              <h2 class="section-title">Diffusion-level fidelity · Real-time throughput</h2>
+            </div>
+            <p class="section-subtitle">
+              At 832×480 resolution, InstantViR achieves over 35&nbsp;FPS and
+              offers up to 100× speedup over sampling-based diffusion solvers,
+              while maintaining competitive PSNR, LPIPS and FVD.
+            </p>
+          </div>
+
+          <div class="metrics-row">
+            <div class="card">
+              <p>
+                Traditional diffusion-based inverse solvers (DPS, SVI, VISION-XL)
+                rely on hundreds of denoising steps and frequent pixel-space
+                decoding, making them impractical for interactive or streaming
+                scenarios. InstantViR amortizes this iterative process into a
+                single feed-forward pass: during training, the student matches the
+                teacher&apos;s posterior distribution via score distillation; at
+                test time, only the lightweight student network and LeanVAE are
+                evaluated.
+              </p>
+              <p style="margin-top: 10px">
+                This design yields orders-of-magnitude speedups without sacrificing
+                perceptual quality. The framework naturally supports different
+                degradation operators (random masks, Gaussian blur, downsampling)
+                and generalizes well across datasets, including Open-Sora and REDS.
+              </p>
+              <div class="metric-highlight">
+                <span>&gt;35&nbsp;FPS @ 832×480 (A100)</span>
+                <span>Up to 100× faster than iterative diffusion</span>
+                <span>Competitive PSNR / LPIPS / FVD</span>
+              </div>
+            </div>
+
+            <div class="metric-fig">
+              <img
+                src="bubble.png"
+                alt="Bubble plot comparing FPS and reconstruction quality with DPS, SVI and VISION-XL."
+              />
+            </div>
+          </div>
+
+          <div class="results-tables">
+            <div class="results-table-wrapper">
+              <h3 class="results-table-title">Table 1. Temporal quality &amp; inference speed</h3>
+              <p class="results-table-caption">
+                Temporal consistency is measured by FVD&nbsp;&darr; on three tasks, and efficiency by
+                average FPS&nbsp;&uarr; on a single NVIDIA A800 80GB GPU. Best results are in bold,
+                suboptimal are underlined.
+              </p>
+              <table class="results-table">
+                <thead>
+                  <tr>
+                    <th>Method</th>
+                    <th>FVD&nbsp;&darr; (Inpainting)</th>
+                    <th>FVD&nbsp;&darr; (Super-Res.)</th>
+                    <th>FVD&nbsp;&darr; (Deblur)</th>
+                    <th>Avg. FPS&nbsp;&uarr;</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>DPS</td>
+                    <td>375.81</td>
+                    <td>711.61</td>
+                    <td>783.10</td>
+                    <td>&lt; 0.02</td>
+                  </tr>
+                  <tr>
+                    <td>DiffIR2VR</td>
+                    <td>–</td>
+                    <td>311.61</td>
+                    <td>–</td>
+                    <td>0.12</td>
+                  </tr>
+                  <tr>
+                    <td>SVI</td>
+                    <td>219.90</td>
+                    <td>176.60</td>
+                    <td>154.38</td>
+                    <td>0.29</td>
+                  </tr>
+                  <tr>
+                    <td>VISION-XL</td>
+                    <td>224.74</td>
+                    <td>172.79</td>
+                    <td>138.79</td>
+                    <td>&lt; 0.17</td>
+                  </tr>
+                  <tr>
+                    <td><strong>InstantViR (Ours)</strong></td>
+                    <td class="underline">136.06</td>
+                    <td><strong>153.13</strong></td>
+                    <td class="underline">110.51</td>
+                    <td class="underline">13.91</td>
+                  </tr>
+                  <tr>
+                    <td><strong>InstantViR† (Ours)</strong></td>
+                    <td><strong>132.59</strong></td>
+                    <td class="underline">156.43</td>
+                    <td><strong>103.45</strong></td>
+                    <td><strong>35.56</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="results-table-wrapper">
+              <h3 class="results-table-title">Table 2. Spatial quality (PSNR / SSIM / LPIPS)</h3>
+              <p class="results-table-caption">
+                Per-frame reconstruction and perceptual quality on 50% random inpainting, 4&times;
+                super-resolution and Gaussian deblurring. Best results are in bold, suboptimal are
+                underlined.
+              </p>
+              <table class="results-table">
+                <thead>
+                  <tr>
+                    <th rowspan="2">Method</th>
+                    <th colspan="3">50% Random Inpainting</th>
+                    <th colspan="3">4&times; Super-Res.</th>
+                    <th colspan="3">Gaussian Deblur</th>
+                  </tr>
+                  <tr>
+                    <th>PSNR&nbsp;&uarr;</th>
+                    <th>SSIM&nbsp;&uarr;</th>
+                    <th>LPIPS&nbsp;&darr;</th>
+                    <th>PSNR&nbsp;&uarr;</th>
+                    <th>SSIM&nbsp;&uarr;</th>
+                    <th>LPIPS&nbsp;&darr;</th>
+                    <th>PSNR&nbsp;&uarr;</th>
+                    <th>SSIM&nbsp;&uarr;</th>
+                    <th>LPIPS&nbsp;&darr;</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>DPS</td>
+                    <td>27.68</td>
+                    <td>0.92</td>
+                    <td>0.32</td>
+                    <td>22.78</td>
+                    <td>0.91</td>
+                    <td>0.46</td>
+                    <td>23.54</td>
+                    <td>0.88</td>
+                    <td>0.46</td>
+                  </tr>
+                  <tr>
+                    <td>DiffIR2VR</td>
+                    <td>–</td>
+                    <td>–</td>
+                    <td>–</td>
+                    <td>33.44</td>
+                    <td>0.92</td>
+                    <td>0.33</td>
+                    <td>–</td>
+                    <td>–</td>
+                    <td>–</td>
+                  </tr>
+                  <tr>
+                    <td>SVI</td>
+                    <td>29.42</td>
+                    <td>0.90</td>
+                    <td>0.17</td>
+                    <td>33.85</td>
+                    <td>0.96</td>
+                    <td><strong>0.17</strong></td>
+                    <td>26.93</td>
+                    <td>0.89</td>
+                    <td>0.31</td>
+                  </tr>
+                  <tr>
+                    <td>VISION-XL</td>
+                    <td class="underline">30.83</td>
+                    <td>0.95</td>
+                    <td>0.25</td>
+                    <td><strong>35.69</strong></td>
+                    <td><strong>0.98</strong></td>
+                    <td>0.24</td>
+                    <td>30.03</td>
+                    <td>0.93</td>
+                    <td>0.28</td>
+                  </tr>
+                  <tr>
+                    <td><strong>InstantViR (Ours)</strong></td>
+                    <td>30.54</td>
+                    <td><strong>0.97</strong></td>
+                    <td class="underline">0.12</td>
+                    <td class="underline">34.91</td>
+                    <td class="underline">0.96</td>
+                    <td>0.23</td>
+                    <td><strong>31.85</strong></td>
+                    <td><strong>0.97</strong></td>
+                    <td class="underline">0.17</td>
+                  </tr>
+                  <tr>
+                    <td><strong>InstantViR† (Ours)</strong></td>
+                    <td><strong>31.78</strong></td>
+                    <td class="underline">0.96</td>
+                    <td><strong>0.13</strong></td>
+                    <td>27.04</td>
+                    <td>0.95</td>
+                    <td class="underline">0.22</td>
+                    <td class="underline">31.16</td>
+                    <td class="underline">0.97</td>
+                    <td><strong>0.15</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- BibTeX -->
+        <section class="section" id="bibtex">
+          <div class="section-header">
+            <div>
+              <div class="section-kicker">BibTeX</div>
+              <h2 class="section-title">Cite InstantViR</h2>
+            </div>
+          </div>
+
+          <div class="bib-card">
+            <pre>
+@article{bai2025instantvir,
+  title   = {InstantViR: Real-Time Video Inverse Problem Solver with Distilled Diffusion Prior},
+  author  = {Bai, Weimin and Xu, Suzhe and Ren, Yiwei and Hao, Jinhua and
+             Sun, Ming and Chen, Wenzheng and Sun, He},
+  journal = {arXiv preprint},
+  year    = {2025},
+  note    = {To appear}
+}</pre>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer>
+      <div class="footer-inner">
+        <span>
+          © 2025 InstantViR. All rights reserved.
+        </span>
+        <span>
+          For questions, please contact the authors.
+        </span>
+      </div>
+    </footer>
+  </body>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const clamps = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+      document.querySelectorAll("[data-cmp]").forEach((cmp) => {
+        const topLayer = cmp.querySelector(".cmp-top");
+        const handle = cmp.querySelector(".cmp-handle");
+        const knob = cmp.querySelector(".cmp-knob");
+        const baseVideo = cmp.querySelector(":scope > video");
+        const topVideo = topLayer ? topLayer.querySelector("video") : null;
+        if (!topLayer || !handle || !knob || !baseVideo || !topVideo) return;
+
+        const updateSplit = (clientX) => {
+          const rect = cmp.getBoundingClientRect();
+          const ratio = clamps((clientX - rect.left) / rect.width, 0, 1);
+          const pct = (ratio * 100).toFixed(2) + "%";
+          topLayer.style.setProperty("--split", pct);
+          handle.style.left = pct;
+          knob.style.left = pct;
+        };
+
+        const stopDrag = () => {
+          cmp._dragging = false;
+          window.removeEventListener("pointermove", onMove);
+          window.removeEventListener("pointerup", stopDrag);
+        };
+
+        const onMove = (e) => {
+          if (!cmp._dragging) return;
+          updateSplit(e.clientX);
+        };
+
+        const startDrag = (e) => {
+          cmp._dragging = true;
+          updateSplit(e.clientX);
+          window.addEventListener("pointermove", onMove);
+          window.addEventListener("pointerup", stopDrag);
+        };
+
+        handle.addEventListener("pointerdown", startDrag);
+        knob.addEventListener("pointerdown", startDrag);
+        cmp.addEventListener("pointerdown", startDrag);
+
+        // 同步 Measurement(topVideo) 与 Ours(baseVideo) 的播放 / 暂停 / 进度
+        const syncTime = () => {
+          if (Math.abs(baseVideo.currentTime - topVideo.currentTime) > 0.05) {
+            baseVideo.currentTime = topVideo.currentTime;
+          }
+        };
+
+        topVideo.addEventListener("play", () => {
+          syncTime();
+          if (baseVideo.paused) {
+            baseVideo.play().catch(() => {});
+          }
+        });
+
+        topVideo.addEventListener("pause", () => {
+          if (!baseVideo.paused) baseVideo.pause();
+        });
+
+        topVideo.addEventListener("seeked", syncTime);
+        topVideo.addEventListener("timeupdate", syncTime);
+      });
+    });
+  </script>
+</html>
+
+
