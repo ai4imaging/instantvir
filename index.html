@@ -70,12 +70,14 @@
             <sup>1</sup>Peking University&nbsp;&nbsp;&nbsp;
             <sup>2</sup>Huaqiao University&nbsp;&nbsp;&nbsp;
             <sup>3</sup>Kuaishou Technology
+            <br />
+            <sup>†</sup>Corresponding authors
           </div>
 
           <div class="cta-row">
             <a
               class="btn btn-primary"
-              href="http://arxiv.org/abs/2511.14208"
+              href="https://arxiv.org/abs/2511.14208"
               target="_blank"
               rel="noreferrer"
             >
@@ -165,7 +167,7 @@
           <div class="section-header">
             <div>
               <div class="section-kicker">Method</div>
-              <h2 class="section-title">From slow diffusion prior to instant solver</h2>
+              <h2 class="section-title">Amortized Video Prior Distillation</h2>
             </div>
             <p class="section-subtitle">
               InstantViR converts a bidirectional video diffusion model into a
@@ -187,60 +189,46 @@
                 runs as a fast, causal feed-forward network over video blocks.
               </div>
             </div>
-            <div>
-              <ul class="method-list">
-                <li class="method-item">
-                  <h3 class="method-item-title">
-                    Amortized posterior objective in latent space
-                  </h3>
-                  <p class="method-item-desc">
-                    We minimize the KL divergence
-                    between the solver&apos;s conditional distribution
-                    <em>q<span style="font-size: 0.9em;">(z | y)</span></em> and the
-                    true posterior induced by the diffusion prior.
-                    The objective decomposes into a likelihood term enforcing
-                    measurement consistency and a prior term implemented as
-                    score distillation with the teacher model.
-                  </p>
-                </li>
-                <li class="method-item">
-                  <h3 class="method-item-title">
-                    Causal, block-wise autoregressive DiT
-                  </h3>
-                  <p class="method-item-desc">
-                    The student operates on temporal blocks of frames with
-                    intra-block bidirectional attention and inter-block causal
-                    attention. A KV cache reuses keys/values from past blocks,
-                    enabling efficient streaming inference while preserving
-                    long-range temporal coherence.
-                  </p>
-                </li>
-                <li class="method-item">
-                  <h3 class="method-item-title">LeanVAE with teacher-space regularization</h3>
-                  <p class="method-item-desc">
-                    To remove the VAE bottleneck, we plug in an ultra-efficient
-                    LeanVAE and regularize its latent space by mapping decoded
-                    frames back into the teacher latent space before applying
-                    score distillation. This alignment keeps the distilled solver
-                    compatible with the original diffusion prior while yielding
-                    &gt;2× additional speedup.
-                  </p>
-                </li>
-              </ul>
-            </div>
-
-            <!-- <div class="overview-fig">
-              <img
-                src="figs/instantvir-overview4.svg"
-                alt="Training and inference overview of InstantViR."
-              />
-              <div class="overview-caption">
-                <strong>Overview.</strong> During training, InstantViR jointly
-                optimizes data fidelity and prior distillation using a frozen
-                video diffusion teacher. At inference time, the learned solver
-                runs as a fast, causal feed-forward network over video blocks.
-              </div>
-            </div> -->
+            
+            <ul class="method-list">
+              <li class="method-item">
+                <h3 class="method-item-title">
+                  Amortized posterior objective in latent space
+                </h3>
+                <p class="method-item-desc">
+                  We minimize the KL divergence
+                  between the solver&apos;s conditional distribution
+                  <em>q<span style="font-size: 0.9em;">(z | y)</span></em> and the
+                  true posterior induced by the diffusion prior.
+                  The objective decomposes into a likelihood term enforcing
+                  measurement consistency and a prior term implemented as
+                  score distillation with the teacher model.
+                </p>
+              </li>
+              <li class="method-item">
+                <h3 class="method-item-title">
+                  Causal, block-wise autoregressive DiT
+                </h3>
+                <p class="method-item-desc">
+                  The student operates on temporal blocks of frames with
+                  intra-block bidirectional attention and inter-block causal
+                  attention. A KV cache reuses keys/values from past blocks,
+                  enabling efficient streaming inference while preserving
+                  long-range temporal coherence.
+                </p>
+              </li>
+              <li class="method-item">
+                <h3 class="method-item-title">LeanVAE with teacher-space regularization</h3>
+                <p class="method-item-desc">
+                  To remove the VAE bottleneck, we plug in an ultra-efficient
+                  LeanVAE and regularize its latent space by mapping decoded
+                  frames back into the teacher latent space before applying
+                  score distillation. This alignment keeps the distilled solver
+                  compatible with the original diffusion prior while yielding
+                  &gt;2× additional speedup.
+                </p>
+              </li>
+            </ul>
           </div>
         </section>
 
@@ -249,11 +237,10 @@
           <div class="section-header">
             <div>
               <div class="section-kicker">Qualitative Results</div>
-              <h2 class="section-title">Random inpainting, deblurring and SR4×</h2>
+<!--              <h2 class="section-title">Random inpainting, deblurring and SR4×</h2>-->
             </div>
             <p class="section-subtitle">
-              Side-by-side comparisons against diffusion-based baselines (DPS,
-              SVI, VISION-XL) and ground truth. All demos are generated with the
+              Side-by-side comparisons against diffusion-based baselines and ground truth. All demos are generated with the
               same degraded inputs as in the paper figures.
             </p>
           </div>
@@ -760,72 +747,6 @@
         </span>
       </div>
     </footer>
+    <script src="script.js"></script>
   </body>
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      const clamps = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-      document.querySelectorAll("[data-cmp]").forEach((cmp) => {
-        const topLayer = cmp.querySelector(".cmp-top");
-        const handle = cmp.querySelector(".cmp-handle");
-        const knob = cmp.querySelector(".cmp-knob");
-        const baseVideo = cmp.querySelector(":scope > video");
-        const topVideo = topLayer ? topLayer.querySelector("video") : null;
-        if (!topLayer || !handle || !knob || !baseVideo || !topVideo) return;
-
-        const updateSplit = (clientX) => {
-          const rect = cmp.getBoundingClientRect();
-          const ratio = clamps((clientX - rect.left) / rect.width, 0, 1);
-          const pct = (ratio * 100).toFixed(2) + "%";
-          topLayer.style.setProperty("--split", pct);
-          handle.style.left = pct;
-          knob.style.left = pct;
-        };
-
-        const stopDrag = () => {
-          cmp._dragging = false;
-          window.removeEventListener("pointermove", onMove);
-          window.removeEventListener("pointerup", stopDrag);
-        };
-
-        const onMove = (e) => {
-          if (!cmp._dragging) return;
-          updateSplit(e.clientX);
-        };
-
-        const startDrag = (e) => {
-          cmp._dragging = true;
-          updateSplit(e.clientX);
-          window.addEventListener("pointermove", onMove);
-          window.addEventListener("pointerup", stopDrag);
-        };
-
-        handle.addEventListener("pointerdown", startDrag);
-        knob.addEventListener("pointerdown", startDrag);
-        cmp.addEventListener("pointerdown", startDrag);
-
-        // 同步 Measurement(topVideo) 与 Ours(baseVideo) 的播放 / 暂停 / 进度
-        const syncTime = () => {
-          if (Math.abs(baseVideo.currentTime - topVideo.currentTime) > 0.05) {
-            baseVideo.currentTime = topVideo.currentTime;
-          }
-        };
-
-        topVideo.addEventListener("play", () => {
-          syncTime();
-          if (baseVideo.paused) {
-            baseVideo.play().catch(() => {});
-          }
-        });
-
-        topVideo.addEventListener("pause", () => {
-          if (!baseVideo.paused) baseVideo.pause();
-        });
-
-        topVideo.addEventListener("seeked", syncTime);
-        topVideo.addEventListener("timeupdate", syncTime);
-      });
-    });
-  </script>
 </html>
-
-
